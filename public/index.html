@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlanGetaway | MC Jorn Shoreline Booking</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <nav>
+                <div class="logo" onclick="viewController.showCustomer()">Glan<span>Getaway</span></div>
+                
+                <div class="nav-items">
+                    <button class="btn-icon" title="Report Issue" onclick="document.getElementById('report-modal').classList.add('active')">🏳️</button>
+                    <div id="nav-buttons"></div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main id="view-customer">
+        <div class="hero">
+            <div class="container">
+                <h1>Escape to Paradise</h1>
+                <p>Paradise found in the heart of Sarangani.</p>
+            </div>
+        </div>
+        <div class="container">
+            <div id="listings-container" class="listings-grid"></div>
+        </div>
+    </main>
+
+    <main id="view-guest-auth" class="container hidden">
+        <div class="auth-wrapper">
+            <div class="card auth-card">
+                <h2 id="auth-title">Guest Login</h2>
+                <form id="guest-auth-form">
+                    <div class="input-group">
+                        <label>Username</label>
+                        <input type="text" id="guest-user" required placeholder="Choose a username">
+                    </div>
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" id="guest-pass" required placeholder="Enter password">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block" id="auth-btn-submit">Login</button>
+                </form>
+                <p class="auth-switch">
+                    <span id="auth-toggle-text">New here?</span> 
+                    <a href="#" onclick="guestAuth.toggleMode()">Click here</a>
+                </p>
+                <button class="btn btn-outline btn-block mt-20" onclick="viewController.showCustomer()">Cancel</button>
+            </div>
+        </div>
+    </main>
+
+    <main id="view-guest-bookings" class="container hidden mt-40">
+        <h2>My Bookings</h2>
+        <div class="card table-responsive p-0">
+            <table id="guest-bookings-table">
+                <thead><tr><th>Type</th><th>Date</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="guest-bookings-body"></tbody>
+            </table>
+        </div>
+        <button class="btn btn-outline mt-20" onclick="viewController.showCustomer()">Back to Home</button>
+    </main>
+
+    <main id="view-login" class="container hidden">
+        <div class="auth-wrapper">
+            <div class="card auth-card">
+                <h2>Admin Access</h2>
+                <form id="admin-login-form">
+                    <div class="input-group">
+                        <label>Username</label>
+                        <input type="text" id="admin-user" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" id="admin-pass" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Login</button>
+                    <button type="button" class="btn btn-outline btn-block mt-10" onclick="viewController.showCustomer()">Back</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <main id="view-admin" class="container hidden mt-40">
+        <div class="flex-between mb-20">
+            <h2>Admin Dashboard</h2>
+            <span style="color:#666;">User: Adnan</span>
+        </div>
+
+        <div class="admin-nav">
+            <div class="admin-tab active" onclick="adminApp.switchTab('bookings')">Bookings</div>
+            <div class="admin-tab" onclick="adminApp.switchTab('messages')">Messages</div>
+            <div class="admin-tab" onclick="adminApp.switchTab('reports')">Reports</div>
+        </div>
+
+        <div id="tab-bookings">
+            <div class="card table-responsive p-0">
+                <table id="admin-bookings-table">
+                    <thead><tr><th>Guest</th><th>Type</th><th>Amount</th><th>Method</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody id="admin-bookings-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="tab-messages" class="hidden">
+            <div class="card p-20">
+                <h3>Guest Inquiries</h3>
+                <div id="admin-messages-list"></div>
+            </div>
+        </div>
+
+        <div id="tab-reports" class="hidden">
+            <div class="card table-responsive p-0">
+                <table>
+                    <thead><tr><th>Type</th><th>Description</th><th>Date</th></tr></thead>
+                    <tbody id="admin-reports-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="gallery-modal">
+        <div class="modal modal-lg">
+            <div class="flex-between mb-10">
+                <h3 style="color:var(--text-main);">Resort Gallery</h3> <button class="btn btn-sm btn-outline" onclick="app.closeGallery()">Close X</button>
+            </div>
+            
+            <div class="gallery-wrapper">
+                <button class="gallery-btn prev-btn" onclick="app.changeGalleryImage(-1)">❮</button>
+                <img id="gallery-active-img" src="" alt="Gallery Image" class="gallery-img-view">
+                <button class="gallery-btn next-btn" onclick="app.changeGalleryImage(1)">❯</button>
+            </div>
+            <p id="gallery-counter">1 / 3</p>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="map-modal">
+        <div class="modal">
+            <div class="flex-between">
+                <h2>Location Map</h2>
+                <button class="btn btn-sm btn-outline" onclick="app.closeMap()">Close</button>
+            </div>
+            <div id="map"></div>
+            <button class="btn btn-primary btn-block mt-15" onclick="app.getDirections()">
+                📍 Get Directions (Route Finder)
+            </button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="chat-modal">
+        <div class="modal">
+            <div class="flex-between mb-10">
+                <h2>Chat with Staff</h2>
+                <button class="btn btn-sm btn-outline" onclick="app.closeChat()">Close</button>
+            </div>
+            <div class="chat-window" id="guest-chat-window"></div>
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="guest-chat-input" placeholder="Type a message..." style="width:100%;">
+                <button class="btn btn-primary" onclick="app.sendGuestMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="booking-modal">
+        <div class="modal modal-booking-xl">
+            <div class="flex-between">
+                <h2>Book Your Stay</h2>
+                <button class="btn btn-sm btn-outline" onclick="app.closeModal()">Close</button>
+            </div>
+            
+            <div class="booking-layout">
+                <form id="booking-form">
+                    <div class="input-group">
+                        <label>Full Name</label>
+                        <input type="text" id="booking-guest-name" required placeholder="John Doe">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Excess Pax (Standard capacity included)</label>
+                        <input type="number" id="booking-excess" value="0" min="0" onchange="app.calculateTotal()">
+                        <small style="color:var(--text-light)">Excess charged at ₱100/pax.</small>
+                    </div>
+
+                    <h3 style="font-size: 1rem; margin-bottom: 10px;">Payment Method</h3>
+                    <div class="payment-options">
+                        <div class="payment-card" onclick="app.selectPayment(this, 'GCash')">GCash</div>
+                        <div class="payment-card" onclick="app.selectPayment(this, 'Cash')">Cash on Arrival</div>
+                    </div>
+
+                    <div id="payment-input-container" class="hidden">
+                        <div class="payment-note">
+                            <strong>Note:</strong> 50% reservation fee required.
+                        </div>
+                        <label id="payment-label">Account Info</label>
+                        <input type="text" id="payment-field" required disabled>
+                    </div>
+
+                    <div class="bill-summary">
+                        <div class="flex-between mb-5">
+                            <span>Base Rate:</span> <span id="bill-base">₱0</span>
+                        </div>
+                        <div class="flex-between mb-5">
+                            <span>Excess Pax:</span> <span id="bill-excess">₱0</span>
+                        </div>
+                        <div class="flex-between mb-5">
+                            <span>Weekday Discount (15%):</span> <span id="bill-discount" style="color:red">-₱0</span>
+                        </div>
+                        <hr style="margin:10px 0;">
+                        <div class="flex-between font-bold text-lg">
+                            <span>Total Due:</span> <span id="bill-total" style="color: var(--primary);">₱0</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">Confirm Booking</button>
+                </form>
+
+                <div class="booking-options-wrapper">
+                    <h3 style="margin-bottom:10px;">Select Accommodation</h3>
+                    <div class="booking-options-list" id="booking-options-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="zoom-modal" onclick="document.getElementById('zoom-modal').classList.remove('active')">
+        <div class="zoom-container">
+            <img id="zoomed-image" src="" alt="Zoomed View">
+            <button class="btn btn-sm btn-primary zoom-close" onclick="document.getElementById('zoom-modal').classList.remove('active')">Close</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="report-modal">
+        <div class="modal">
+            <h2 class="mb-20">Report an Issue</h2>
+            <form id="report-form">
+                <div class="input-group">
+                    <label>Issue Type</label>
+                    <select id="report-type">
+                        <option>Website Bug</option>
+                        <option>Incorrect Info</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Description</label>
+                    <textarea id="report-desc" rows="3" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Submit Report</button>
+                <button type="button" class="btn btn-outline btn-block mt-10" onclick="document.getElementById('report-modal').classList.remove('active')">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">Action Successful!</div>
+
+    <footer>
+        <p>© 2026 GlanGetaway | MC Jorn Shoreline Beach Resort</p>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
