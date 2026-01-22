@@ -1,109 +1,119 @@
 const express = require('express');
+const cors = require('cors');
 const bodyParser = require('body-parser');
+const fs = require('fs');
 const path = require('path');
+
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0'; // Add this line
 
 // Middleware
+app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static('public')); // Serves your HTML file
 
-// --- IN-MEMORY DATABASE (Reset on server restart) ---
-let BOOKINGS = [];
-let REPORTS = [];
-let CHATS = [];
-let USERS = []; // Simple user store
+// --- DATABASE HELPER FUNCTIONS ---
+// We use simple JSON files in a 'data' folder to store information persistently.
+const DATA_DIR = path.join(__dirname, 'data');
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 
-// --- ROUTES ---
+const getFile = (file) => path.join(DATA_DIR, `${file}.json`);
 
-// 1. Auth Routes
-app.post('/api/auth/register', (req, res) => {
+const readData = (file) => {
+    if (!fs.existsSync(getFile(file))) return [];
+    return JSON.parse(fs.readFileSync(getFile(file), 'utf8'));
+};
+
+const writeData = (file, data) => {
+    fs.writeFileSync(getFile(file), JSON.stringify(data, null, 2));
+};
+
+// --- AUTH ROUTES ---
+app.post('/api/auth/signup', (req, res) => {
     const { user, pass } = req.body;
-    if (USERS.find(u => u.user === user)) {
-        return res.status(400).json({ message: "User already exists" });
-    }
-    USERS.push({ user, pass });
+    const users = readData('users');
+    if (users.find(u => u.user === user)) return res.status(400).json({ error: 'User exists' });
+    users.push({ user, pass });
+    writeData('users', users);
     res.json({ success: true, user });
 });
 
 app.post('/api/auth/login', (req, res) => {
     const { user, pass } = req.body;
-    const account = USERS.find(u => u.user === user && u.pass === pass);
-    if (account) {
-        res.json({ success: true, user: account.user });
-    } else {
-        res.status(401).json({ success: false, message: "Invalid credentials" });
-    }
+    const users = readData('users');
+    // Hardcoded admin check
+    if (user === 'adnan' && pass === '@dn@n') return res.json({ success: true, role: 'admin' });
+    
+    const valid = users.find(u => u.user === user && u.pass === pass);
+    if (valid) res.json({ success: true, role: 'guest', user });
+    else res.status(401).json({ error: 'Invalid credentials' });
 });
 
-app.post('/api/admin/login', (req, res) => {
-    const { user, pass } = req.body;
-    // Hardcoded admin credentials from original code
-    if (user === 'adnan' && pass === '@dn@n') {
-        res.json({ success: true });
-    } else {
-        res.status(401).json({ success: false });
-    }
-});
-
-// 2. Booking Routes
+// --- BOOKING ROUTES ---
 app.get('/api/bookings', (req, res) => {
-    res.json(BOOKINGS);
+    res.json(readData('bookings'));
 });
 
 app.post('/api/bookings', (req, res) => {
-    const booking = {
-        id: Date.now().toString(),
-        ...req.body,
-        status: req.body.method === 'Cash' ? 'Pending' : 'Paid'
-    };
-    BOOKINGS.push(booking);
-    res.json({ success: true, booking });
+    const bookings = readData('bookings');
+    const newBooking = { ...req.body, id: Date.now().toString(), dateCreated: new Date() };
+    bookings.push(newBooking);
+    writeData('bookings', bookings);
+    res.json(newBooking);
 });
 
-app.post('/api/bookings/:id/cancel', (req, res) => {
-    const booking = BOOKINGS.find(b => b.id === req.params.id);
-    if (booking) {
-        booking.status = 'Cancelled';
+app.post('/api/bookings/update', (req, res) => {
+    const { id, status } = req.body;
+    let bookings = readData('bookings');
+    const index = bookings.findIndex(b => b.id === id);
+    if (index !== -1) {
+        bookings[index].status = status;
+        writeData('bookings', bookings);
         res.json({ success: true });
     } else {
-        res.status(404).json({ success: false });
+        res.status(404).json({ error: 'Booking not found' });
     }
 });
 
-app.post('/api/bookings/:id/confirm', (req, res) => {
-    const booking = BOOKINGS.find(b => b.id === req.params.id);
-    if (booking) {
-        booking.status = 'Paid';
-        res.json({ success: true });
-    } else {
-        res.status(404).json({ success: false });
-    }
-});
-
-// 3. Chat Routes
+// --- CHAT ROUTES ---
 app.get('/api/chat', (req, res) => {
-    res.json(CHATS);
+    res.json(readData('chats'));
 });
 
 app.post('/api/chat', (req, res) => {
-    const msg = { ...req.body, timestamp: new Date() };
-    CHATS.push(msg);
-    res.json({ success: true, msg });
+    const chats = readData('chats');
+    chats.push(req.body);
+    writeData('chats', chats);
+    res.json({ success: true });
 });
 
-// 4. Report Routes
+// --- REVIEW ROUTES ---
+app.get('/api/reviews', (req, res) => {
+    res.json(readData('reviews'));
+});
+
+app.post('/api/reviews', (req, res) => {
+    const reviews = readData('reviews');
+    reviews.unshift(req.body); // Add to top
+    writeData('reviews', reviews);
+    res.json({ success: true });
+});
+
+// --- REPORT ROUTES ---
 app.get('/api/reports', (req, res) => {
-    res.json(REPORTS);
+    res.json(readData('reports'));
 });
 
 app.post('/api/reports', (req, res) => {
-    const report = { ...req.body, date: new Date().toLocaleDateString() };
-    REPORTS.push(report);
+    const reports = readData('reports');
+    reports.push(req.body);
+    writeData('reports', reports);
     res.json({ success: true });
 });
 
 // Start Server
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => {
     console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`To access from phone, use your PC's IP address (e.g., http://192.168.1.5:3000)`);
 });
