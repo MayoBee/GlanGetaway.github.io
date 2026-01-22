@@ -1,16 +1,18 @@
 /**
  * ==========================================================
- * 1. CONFIGURATION
+ * 1. DATA & CONFIGURATION
  * ==========================================================
  */
 const TARGET_COORDS = [5.796623590066378, 125.17621205830864];
+const API_BASE = '/api'; // Relative path to server
 
+// Accommodation Data
 const ACCOMMODATIONS = [
-    { id: 'cottage', name: 'Open Cottage', price: 1000, desc: 'Free entrance for 6 pax. Near shore.', img: 'Open cottage.jpg' },
-    { id: 'ahouse_fan', name: 'A-House (Non-Aircon)', price: 1500, desc: 'Good for 4-6 pax.', img: '491308916_978933461080029_7076060212183855253_n.jpg' },
-    { id: 'ahouse_ac', name: 'A-House (Aircon)', price: 2000, desc: 'Good for 4-6 pax. Comfortable stay.', img: '491308916_978933461080029_7076060212183855253_n.jpg' },
-    { id: 'barkada_at', name: 'Barkada Offer (At-atoan)', price: 5000, desc: 'Great for groups.', img: '491407471_978933601080015_9014631399414983838_n.jpg' },
-    { id: 'barkada_dap', name: 'Barkada Offer (Dap-ayan)', price: 10000, desc: 'Premium group experience.', img: '491407471_978933601080015_9014631399414983838_n.jpg' }
+    { id: 'cottage', name: 'Open Cottage', price: 1000, desc: 'Free entrance for 6 pax.', img: 'Open cottage.jpg' },
+    { id: 'ahouse_fan', name: 'A-House (Fan)', price: 1500, desc: 'Good for 4-6 pax.', img: '491308916_978933461080029_7076060212183855253_n.jpg' },
+    { id: 'ahouse_ac', name: 'A-House (AC)', price: 2000, desc: 'Good for 4-6 pax.', img: '491308916_978933461080029_7076060212183855253_n.jpg' },
+    { id: 'barkada_at', name: 'Barkada (At-atoan)', price: 5000, desc: 'Large group package.', img: '491407471_978933601080015_9014631399414983838_n.jpg' },
+    { id: 'barkada_dap', name: 'Barkada (Dap-ayan)', price: 10000, desc: 'Premium group package.', img: '491407471_978933601080015_9014631399414983838_n.jpg' }
 ];
 
 const RESORT_DATA = { 
@@ -19,39 +21,38 @@ const RESORT_DATA = {
     coords: TARGET_COORDS, 
     mainImage: "frontpage.jpg", 
     description: "Experience the pristine white sands and crystal clear waters of Glan. MC Jorn Shoreline offers a peaceful escape perfect for family reunions.",
-    gallery: [
-        "Screenshot 2026-01-19 095754.png", 
-        "Screenshot 2026-01-19 155012.png", 
-        "Screenshot 2026-01-19 100135.png"
-    ],
+    gallery: ["Screenshot 2026-01-19 095754.png", "Screenshot 2026-01-19 155012.png", "Screenshot 2026-01-19 100135.png"],
     features: ["Family Rooms", "Beach Access", "Shoreline View"] 
 };
 
+// Global State
+let GLOBAL_BOOKINGS = [];
+let GLOBAL_REPORTS = [];
+let GLOBAL_CHATS = [];
+let GLOBAL_REVIEWS = [];
 let currentUser = null; 
 
-/**
- * ==========================================================
- * 2. API HELPER
- * ==========================================================
- */
-const API = {
-    async get(url) {
-        const res = await fetch(url);
-        return res.json();
-    },
-    async post(url, data) {
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        return res.json();
+// --- HELPER FUNCTION FOR FETCH CALLS ---
+async function apiCall(endpoint, method = 'GET', body = null) {
+    const options = { 
+        method, 
+        headers: { 'Content-Type': 'application/json' } 
+    };
+    if (body) options.body = JSON.stringify(body);
+    
+    try {
+        const res = await fetch(`${API_BASE}/${endpoint}`, options);
+        if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
+        return await res.json();
+    } catch (err) {
+        console.error(err);
+        return null;
     }
-};
+}
 
 /**
  * ==========================================================
- * 3. VIEW CONTROLLER
+ * 2. VIEW CONTROLLER
  * ==========================================================
  */
 const viewController = {
@@ -63,30 +64,36 @@ const viewController = {
         guestBookings: document.getElementById('view-guest-bookings')
     },
     
-    init() {
+    async init() {
         this.showCustomer();
         this.updateNav();
-        // Initialize Report Form
+        
+        // Initial Data Load
+        await app.fetchReviews();
+
+        // Report Form Listener
         document.getElementById('report-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const data = {
+            const success = await apiCall('reports', 'POST', {
                 type: document.getElementById('report-type').value,
-                desc: document.getElementById('report-desc').value
-            };
-            await API.post('/api/reports', data);
-            document.getElementById('report-modal').classList.remove('active');
-            showToast("Report Submitted. Thank you!");
-            e.target.reset();
+                desc: document.getElementById('report-desc').value,
+                date: new Date().toLocaleDateString()
+            });
+
+            if (success) {
+                document.getElementById('report-modal').classList.remove('active');
+                showToast("Report Submitted. Thank you!");
+                e.target.reset();
+            }
         });
     },
 
     updateNav() {
         const navDiv = document.getElementById('nav-buttons');
         navDiv.innerHTML = ''; 
-
         if (currentUser) {
             navDiv.innerHTML = `
-                <span style="font-weight:600; margin-right:10px; display:none; @media(min-width:600px){display:inline;}">Hi, ${currentUser.user}</span>
+                <span style="font-weight:600; margin-right:10px;">Hi, ${currentUser.user}</span>
                 <button class="btn btn-outline btn-sm" onclick="viewController.showGuestBookings()">My Bookings</button>
                 <button class="btn btn-primary btn-sm" onclick="guestAuth.logout()">Logout</button>
             `;
@@ -113,7 +120,7 @@ const viewController = {
 
 /**
  * ==========================================================
- * 4. GUEST AUTHENTICATION
+ * 3. GUEST AUTH
  * ==========================================================
  */
 const guestAuth = {
@@ -128,34 +135,27 @@ const guestAuth = {
         e.preventDefault();
         const user = document.getElementById('guest-user').value;
         const pass = document.getElementById('guest-pass').value;
+        
+        // Matches server endpoints: 'auth/signup' or 'auth/login'
+        const endpoint = this.isSignup ? 'auth/signup' : 'auth/login';
+        const res = await apiCall(endpoint, 'POST', { user, pass });
 
-        const endpoint = this.isSignup ? '/api/auth/register' : '/api/auth/login';
-        const res = await API.post(endpoint, { user, pass });
-
-        if (res.success) {
-            this.loginUser(res.user);
+        if (res && res.success) {
             showToast(this.isSignup ? "Account Created!" : "Welcome back!");
+            this.loginUser(user);
         } else {
-            alert(res.message || "Authentication Failed.");
+            alert(res?.error || "Authentication failed.");
         }
         e.target.reset();
     },
-    loginUser(username) {
-        currentUser = { user: username };
-        viewController.showCustomer(); 
-    },
-    logout() {
-        currentUser = null;
-        showToast("Logged out successfully.");
-        viewController.showCustomer();
-    }
+    loginUser(username) { currentUser = { user: username }; viewController.showCustomer(); },
+    logout() { currentUser = null; showToast("Logged out."); viewController.showCustomer(); }
 };
-
 document.getElementById('guest-auth-form').addEventListener('submit', (e) => guestAuth.handleAuth(e));
 
 /**
  * ==========================================================
- * 5. MAIN APPLICATION LOGIC
+ * 4. MAIN APPLICATION LOGIC
  * ==========================================================
  */
 class BookingApp {
@@ -165,28 +165,91 @@ class BookingApp {
         this.selectedAccommodation = null;
         this.map = null;
         this.currentGalleryIndex = 0;
-        
+        this.currentRating = 0;
         this.renderListing();
         this.renderBookingOptions();
     }
 
+    // --- REVIEWS LOGIC ---
+    async fetchReviews() {
+        const data = await apiCall('reviews');
+        if (data) GLOBAL_REVIEWS = data;
+        this.renderListing();
+    }
+
+    calculateAvgRating() {
+        if (GLOBAL_REVIEWS.length === 0) return "New";
+        const total = GLOBAL_REVIEWS.reduce((acc, curr) => acc + curr.rating, 0);
+        return (total / GLOBAL_REVIEWS.length).toFixed(1);
+    }
+
+    openReviews() {
+        document.getElementById('reviews-modal').classList.add('active');
+        this.renderReviews();
+    }
+    closeReviews() { document.getElementById('reviews-modal').classList.remove('active'); }
+
+    setRating(n) {
+        this.currentRating = n;
+        const stars = document.getElementById('star-input-group').children;
+        for(let i=0; i<5; i++) stars[i].classList.toggle('active', i < n);
+    }
+
+    async submitReview() {
+        if(!currentUser) return alert("Please login to write a review.");
+        if(this.currentRating === 0) return alert("Please select a star rating.");
+        
+        const success = await apiCall('reviews', 'POST', {
+            user: currentUser.user,
+            rating: this.currentRating,
+            comment: document.getElementById('review-comment').value,
+            date: new Date().toLocaleDateString()
+        });
+
+        if (success) {
+            showToast("Review submitted!");
+            document.getElementById('review-comment').value = '';
+            this.setRating(0);
+            await this.fetchReviews();
+            this.renderReviews();
+        }
+    }
+
+    renderReviews() {
+        const list = document.getElementById('review-list-container');
+        list.innerHTML = GLOBAL_REVIEWS.map(r => `
+            <div class="review-item">
+                <div class="review-header">
+                    <strong>${r.user}</strong>
+                    <span style="font-size:0.85rem; color:#888;">${r.date}</span>
+                </div>
+                <div class="review-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+                <p>${r.comment}</p>
+            </div>
+        `).join('');
+    }
+
     renderListing() {
         const item = this.resort;
+        const avg = this.calculateAvgRating();
+        
         document.getElementById('listings-container').innerHTML = `
             <div class="card">
                 <div class="card-img" onclick="app.openGallery()">
                     <img src="${item.mainImage}" alt="${item.name}">
-                    <div class="card-img-badge">📸 View Gallery</div>
+                    <div style="position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.6); color:white; padding:5px 10px; border-radius:4px; font-size:0.8rem;">
+                        📸 View Gallery
+                    </div>
                 </div>
                 <div class="card-body">
-                    <h3 class="card-title">${item.name}</h3>
-                    <p class="resort-location">📍 ${item.location}</p>
-                    <p class="resort-description">${item.description}</p>
-                    <div class="resort-features">
-                        ${item.features.map(f => `<span>${f}</span>`).join('')}
+                    <div style="display:flex; justify-content:space-between; align-items:start;">
+                        <h3 class="card-title">${item.name}</h3>
+                        <div class="rating-badge" onclick="app.openReviews()">⭐ ${avg} (Reviews)</div>
                     </div>
+                    <p style="font-weight:600; color:var(--primary); margin-bottom:10px;">📍 ${item.location}</p>
+                    <p class="resort-description">${item.description}</p>
                     <div class="card-footer">
-                        <div class="card-price">Rates from <b>₱1,000</b></div>
+                        <div style="font-size:1.1rem; color:var(--text-light);">Rates from <b style="color:var(--secondary);">₱1,000</b></div>
                         <div style="display:flex; gap:10px;">
                             <button class="btn btn-outline btn-sm" onclick="app.openMap()">📍 Map</button>
                             <button class="btn btn-outline btn-sm" onclick="app.openChat()">💬 Chat</button>
@@ -198,7 +261,7 @@ class BookingApp {
         `;
     }
 
-    /* --- MAP --- */
+    /* --- MAP & GALLERY (Standard) --- */
     openMap() {
         document.getElementById('map-modal').classList.add('active');
         if(this.map) this.map.remove(); 
@@ -209,37 +272,16 @@ class BookingApp {
         }, 100);
     }
     closeMap() { document.getElementById('map-modal').classList.remove('active'); }
-    getDirections() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const url = `https://www.google.com/maps/dir/${pos.coords.latitude},${pos.coords.longitude}/${TARGET_COORDS[0]},${TARGET_COORDS[1]}`;
-                    window.open(url, '_blank');
-                },
-                () => { window.open(`https://www.google.com/maps/search/?api=1&query=${TARGET_COORDS[0]},${TARGET_COORDS[1]}`, '_blank'); }
-            );
-        } else { alert("Geolocation not supported."); }
-    }
 
-    /* --- GALLERY --- */
     openGallery() {
         this.currentGalleryIndex = 0;
         this.updateGalleryView();
         document.getElementById('gallery-modal').classList.add('active');
-        document.addEventListener('keydown', this.galleryKeyHandler);
     }
-    closeGallery() { 
-        document.getElementById('gallery-modal').classList.remove('active'); 
-        document.removeEventListener('keydown', this.galleryKeyHandler);
-    }
-    galleryKeyHandler(e) {
-        if(e.key === 'ArrowLeft') app.changeGalleryImage(-1);
-        if(e.key === 'ArrowRight') app.changeGalleryImage(1);
-        if(e.key === 'Escape') app.closeGallery();
-    }
-    changeGalleryImage(direction) {
+    closeGallery() { document.getElementById('gallery-modal').classList.remove('active'); }
+    changeGalleryImage(dir) {
         const total = this.resort.gallery.length;
-        this.currentGalleryIndex = (this.currentGalleryIndex + direction + total) % total;
+        this.currentGalleryIndex = (this.currentGalleryIndex + dir + total) % total;
         this.updateGalleryView();
     }
     updateGalleryView() {
@@ -248,17 +290,21 @@ class BookingApp {
     }
 
     /* --- CHAT --- */
-    openChat() { 
+    async openChat() { 
         document.getElementById('chat-modal').classList.add('active'); 
-        this.loadChat();
+        await this.fetchChats(); 
     }
     closeChat() { document.getElementById('chat-modal').classList.remove('active'); }
-
-    async loadChat() {
-        const chats = await API.get('/api/chat');
+    
+    async fetchChats() {
+        const data = await apiCall('chat');
+        if(data) GLOBAL_CHATS = data;
+        this.renderChat();
+    }
+    renderChat() {
         const box = document.getElementById('guest-chat-window');
-        box.innerHTML = chats.length ? '' : '<p style="text-align:center; color:#999; margin-top:50px;">Start a conversation with us!</p>';
-        chats.forEach(msg => {
+        box.innerHTML = GLOBAL_CHATS.length ? '' : '<p style="text-align:center; color:#999; margin-top:50px;">Start a conversation!</p>';
+        GLOBAL_CHATS.forEach(msg => {
             const div = document.createElement('div');
             div.className = `chat-msg ${msg.sender}`;
             div.innerText = msg.text;
@@ -266,26 +312,21 @@ class BookingApp {
         });
         box.scrollTop = box.scrollHeight;
     }
-
     async sendGuestMessage() {
         const input = document.getElementById('guest-chat-input');
         if(!input.value.trim()) return;
-        await API.post('/api/chat', { sender: 'guest', text: input.value });
+        
+        await apiCall('chat', 'POST', { sender: 'guest', text: input.value });
         input.value = '';
-        this.loadChat();
+        await this.fetchChats();
     }
 
-    /* --- BOOKING --- */
+    /* --- BOOKING & CANCELLATION --- */
     openBooking() {
         document.getElementById('booking-modal').classList.add('active');
         const nameInput = document.getElementById('booking-guest-name');
-        if(currentUser) {
-            nameInput.value = currentUser.user;
-            nameInput.readOnly = true; 
-        } else {
-            nameInput.value = '';
-            nameInput.readOnly = false;
-        }
+        if(currentUser) { nameInput.value = currentUser.user; nameInput.readOnly = true; } 
+        else { nameInput.value = ''; nameInput.readOnly = false; }
         this.selectedAccommodation = null;
         document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
         this.calculateTotal();
@@ -301,173 +342,175 @@ class BookingApp {
                     <div style="font-size:0.9rem; color:var(--text-light);">${opt.desc}</div>
                     <div style="color:var(--primary); font-weight:700;">₱${opt.price.toLocaleString()}</div>
                 </div>
-                <img src="${opt.img}" class="option-thumb" onclick="event.stopPropagation(); app.zoomImage('${opt.img}')" title="Click to enlarge">
+                <img src="${opt.img}" class="option-thumb" onclick="event.stopPropagation(); app.zoomImage('${opt.img}')">
             </div>
         `).join('');
     }
-
     selectAccommodation(el, id) {
         document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
         el.classList.add('selected');
         this.selectedAccommodation = ACCOMMODATIONS.find(a => a.id === id);
         this.calculateTotal();
     }
-
-    zoomImage(src) {
-        document.getElementById('zoomed-image').src = src;
-        document.getElementById('zoom-modal').classList.add('active');
-    }
-
     calculateTotal() {
         const base = this.selectedAccommodation ? this.selectedAccommodation.price : 0;
         const excessCount = parseInt(document.getElementById('booking-excess').value) || 0;
-        const excessCost = excessCount * 100;
-        const isWeekend = [0, 6].includes(new Date().getDay());
-        let discount = (!isWeekend && base > 0) ? base * 0.15 : 0;
-        const total = base + excessCost - discount;
-
+        const total = base + (excessCount * 100);
         document.getElementById('bill-base').innerText = `₱${base.toLocaleString()}`;
-        document.getElementById('bill-excess').innerText = `₱${excessCost.toLocaleString()}`;
-        document.getElementById('bill-discount').innerText = discount > 0 ? `-₱${discount.toLocaleString()}` : "₱0";
+        document.getElementById('bill-excess').innerText = `₱${(excessCount * 100).toLocaleString()}`;
         document.getElementById('bill-total').innerText = `₱${total.toLocaleString()}`;
     }
-
     selectPayment(el, method) {
         document.querySelectorAll('.payment-card').forEach(c => c.classList.remove('selected'));
         el.classList.add('selected');
         this.paymentMethod = method;
-
         const container = document.getElementById('payment-input-container');
-        const label = document.getElementById('payment-label');
         const input = document.getElementById('payment-field');
-
         container.classList.remove('hidden');
-        input.disabled = false;
-        input.value = '';
-
+        input.disabled = false; input.value = '';
         if(method === 'GCash') {
-            label.innerText = "Send 50% to: 09357037450 (NEIL S. WADINGAN)";
+            document.getElementById('payment-label').innerText = "Send 50% to: 09357037450 (NEIL S. WADINGAN)";
             input.placeholder = "Enter Ref Number";
         } else {
-            label.innerText = "Note";
-            input.value = "Payment will be collected at the front desk upon arrival.";
+            document.getElementById('payment-label').innerText = "Note";
+            input.value = "Payment collected at front desk.";
             input.disabled = true; 
         }
     }
 
     async renderGuestBookings() {
-        const tbody = document.getElementById('guest-bookings-body');
-        const allBookings = await API.get('/api/bookings');
-        const myBookings = allBookings.filter(b => b.guest === currentUser.user);
+        const data = await apiCall('bookings');
+        if(!data) return;
+        GLOBAL_BOOKINGS = data;
         
-        if (myBookings.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5">No bookings found.</td></tr>';
-            return;
-        }
+        const tbody = document.getElementById('guest-bookings-body');
+        const myBookings = GLOBAL_BOOKINGS.filter(b => b.guest === currentUser?.user);
+        
+        if (myBookings.length === 0) { tbody.innerHTML = '<tr><td colspan="5">No bookings found.</td></tr>'; return; }
 
         tbody.innerHTML = '';
         myBookings.forEach((b) => {
             const row = document.createElement('tr');
-            const actionBtn = b.status !== 'Cancelled' 
-                ? `<button class="btn btn-sm btn-danger" onclick="app.cancelBooking('${b.id}')">Cancel</button>` 
-                : `<span style="color:#aaa;">-</span>`;
             
-            let statusColor = b.status === 'Paid' ? 'green' : (b.status === 'Cancelled' ? 'red' : '#eab308');
+            // Allow cancellation unless status is final
+            let actionBtn = (b.status !== 'Cancelled' && b.status !== 'Refund Pending' && b.status !== 'Refunded') 
+                ? `<button class="btn btn-sm btn-danger" onclick="app.cancelBooking('${b.id}', '${b.method}', '${b.status}')">Cancel</button>`
+                : `<span style="color:#aaa;">-</span>`;
+
+            let color = (b.status === 'Paid' || b.status === 'Refunded') ? 'green' : ((b.status === 'Cancelled' || b.status === 'Refund Pending') ? 'red' : '#eab308');
 
             row.innerHTML = `
                 <td>${b.type}</td>
-                <td>Today</td>
                 <td>₱${b.total.toLocaleString()}</td>
-                <td style="font-weight:bold; color:${statusColor}">${b.status}</td>
+                <td>${b.method}</td>
+                <td style="font-weight:bold; color:${color}">${b.status}</td>
                 <td>${actionBtn}</td>
             `;
             tbody.appendChild(row);
         });
     }
 
-    async cancelBooking(bookingId) {
-        if (confirm("Are you sure you want to cancel this booking?")) {
-            await API.post(`/api/bookings/${bookingId}/cancel`, {});
-            showToast("Booking Cancelled.");
-            this.renderGuestBookings(); 
+    async cancelBooking(bookingId, method, currentStatus) {
+        if (!confirm("Are you sure you want to cancel this booking?")) return;
+        
+        // Determine status update based on current payment status
+        let newStatus = 'Cancelled';
+        if (method === 'GCash' && currentStatus === 'Paid') newStatus = 'Refund Pending';
+
+        // Use the general update endpoint
+        const success = await apiCall('bookings/update', 'POST', { id: bookingId, status: newStatus });
+        
+        if (success) {
+            showToast("Booking updated.");
+            await this.renderGuestBookings();
         }
     }
 }
 
-// --- BOOKING SUBMISSION HANDLER ---
+// --- SUBMIT BOOKING ---
 document.getElementById('booking-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     if(!app.selectedAccommodation) return alert("Please select an accommodation type.");
     if(!app.paymentMethod) return alert("Please select a payment method.");
     
-    const totalText = document.getElementById('bill-total').innerText.replace('₱', '').replace(',','');
-    const total = parseFloat(totalText);
+    const total = parseFloat(document.getElementById('bill-total').innerText.replace('₱', '').replace(',',''));
+    const initialStatus = app.paymentMethod === 'Cash' ? 'Pending' : 'Paid';
 
-    const data = {
+    const bookingPayload = {
         guest: document.getElementById('booking-guest-name').value,
         type: app.selectedAccommodation.name,
         total: total,
         method: app.paymentMethod,
-        details: document.getElementById('payment-field').value,
+        status: initialStatus
     };
 
-    const res = await API.post('/api/bookings', data);
-    
-    app.closeModal();
-    const msg = res.booking.status === 'Pending' ? "Booking Confirmed! Pay on Arrival." : "Booking Submitted! Waiting for confirmation.";
-    showToast(msg);
-    e.target.reset();
+    const res = await apiCall('bookings', 'POST', bookingPayload);
+    if (res) {
+        app.closeModal();
+        showToast("Booking Submitted!");
+        e.target.reset();
+    }
 });
 
 /**
  * ==========================================================
- * 6. ADMIN APPLICATION LOGIC
+ * 5. ADMIN LOGIC
  * ==========================================================
  */
 class AdminApp {
     constructor() {
-        document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const user = document.getElementById('admin-user').value;
-            const pass = document.getElementById('admin-pass').value;
+        const loginForm = document.getElementById('admin-login-form');
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const user = document.getElementById('admin-user').value;
+                const pass = document.getElementById('admin-pass').value;
 
-            const res = await API.post('/api/admin/login', { user, pass });
-            if (res.success) {
-                viewController.showAdmin();
-            } else {
-                alert("Invalid Login.");
-            }
-        });
+                // Re-use auth login endpoint, but check for admin role
+                const res = await apiCall('auth/login', 'POST', { user, pass });
+                if (res && res.role === 'admin') {
+                    viewController.showAdmin();
+                } else {
+                    alert("Invalid Credentials");
+                }
+            });
+        }
     }
 
-    switchTab(tab) {
+    async switchTab(tab) {
         document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
-        event.target.classList.add('active');
+        if (window.event && window.event.target) window.event.target.classList.add('active');
         
         ['bookings', 'messages', 'reports'].forEach(id => {
-            document.getElementById(`tab-${id}`).classList.add('hidden');
+            const el = document.getElementById(`tab-${id}`);
+            if(el) el.classList.add('hidden');
         });
-        document.getElementById(`tab-${tab}`).classList.remove('hidden');
 
-        if(tab === 'bookings') this.renderBookings();
-        if(tab === 'messages') this.renderMessages();
-        if(tab === 'reports') this.renderReports();
+        const activeTab = document.getElementById(`tab-${tab}`);
+        if(activeTab) activeTab.classList.remove('hidden');
+        
+        if(tab === 'bookings') await this.renderBookings();
+        if(tab === 'messages') await this.fetchAdminMessages();
+        if(tab === 'reports') await this.fetchReports();
     }
 
     async renderBookings() {
-        const bookings = await API.get('/api/bookings');
+        const data = await apiCall('bookings');
+        if(data) GLOBAL_BOOKINGS = data;
+
         const tbody = document.getElementById('admin-bookings-body');
-        tbody.innerHTML = bookings.length ? '' : '<tr><td colspan="6">No bookings yet.</td></tr>';
+        tbody.innerHTML = GLOBAL_BOOKINGS.length ? '' : '<tr><td colspan="6">No bookings yet.</td></tr>';
         
-        bookings.forEach(b => {
+        GLOBAL_BOOKINGS.forEach(b => {
             const row = document.createElement('tr');
-            let statusColor = b.status === 'Paid' ? 'green' : (b.status === 'Cancelled' ? 'red' : '#eab308');
+            let color = b.status === 'Paid' ? 'green' : (b.status.includes('Cancelled') || b.status.includes('Refund') ? 'red' : '#eab308');
 
             let actionHtml = '-';
+            // Logic to approve payments or refunds
             if(b.status === 'Pending') {
-                actionHtml = `<button class="btn btn-sm btn-success" onclick="adminApp.confirmPayment('${b.id}')">Confirm Payment</button>`;
-            } else if (b.status === 'Paid') {
-                actionHtml = `<span style="color:green">✓ Completed</span>`;
+                actionHtml = `<button class="btn btn-sm btn-success" onclick="adminApp.updateStatus('${b.id}', 'Paid')">Confirm Pay</button>`;
+            } else if (b.status === 'Refund Pending') {
+                actionHtml = `<button class="btn btn-sm btn-warning" onclick="adminApp.updateStatus('${b.id}', 'Refunded')">Refunded</button>`;
             }
 
             row.innerHTML = `
@@ -475,71 +518,62 @@ class AdminApp {
                 <td>${b.type}</td>
                 <td>₱${b.total.toLocaleString()}</td>
                 <td>${b.method}</td>
-                <td style="color:${statusColor}; font-weight:bold;">${b.status}</td>
+                <td style="color:${color}; font-weight:bold;">${b.status}</td>
                 <td>${actionHtml}</td>
             `;
             tbody.appendChild(row);
         });
     }
 
-    async confirmPayment(bookingId) {
-        if(confirm(`Confirm payment?`)) {
-            await API.post(`/api/bookings/${bookingId}/confirm`, {});
-            showToast("Payment Confirmed.");
-            this.renderBookings();
+    async updateStatus(id, newStatus) {
+        if(confirm(`Update booking status to ${newStatus}?`)) {
+            await apiCall('bookings/update', 'POST', { id, status: newStatus });
+            showToast("Status updated");
+            await this.renderBookings();
         }
     }
 
-    async renderReports() {
-        const reports = await API.get('/api/reports');
+    async fetchReports() {
+        const data = await apiCall('reports');
+        if(data) GLOBAL_REPORTS = data;
         const tbody = document.getElementById('admin-reports-body');
-        tbody.innerHTML = reports.length ? '' : '<tr><td colspan="3">No reports yet.</td></tr>';
-        reports.forEach(r => {
-            const row = document.createElement('tr');
-            row.innerHTML = `<td>${r.type}</td><td>${r.desc}</td><td>${r.date}</td>`;
-            tbody.appendChild(row);
-        });
+        tbody.innerHTML = GLOBAL_REPORTS.map(r => `<tr><td>${r.type}</td><td>${r.desc}</td><td>${r.date}</td></tr>`).join('') || '<tr><td colspan="3">No reports.</td></tr>';
     }
 
-    async renderMessages() {
-        const chats = await API.get('/api/chat');
-        const container = document.getElementById('admin-messages-list');
-        const lastMsg = chats.length > 0 ? chats[chats.length - 1] : null;
-        
-        if(!lastMsg) {
-            container.innerHTML = '<p>No messages yet.</p>';
-            return;
-        }
+    async fetchAdminMessages() {
+        const data = await apiCall('chat');
+        if(data) GLOBAL_CHATS = data;
+        this.renderMessages();
+    }
 
-        container.innerHTML = `
+    renderMessages() {
+        const container = document.getElementById('admin-messages-list');
+        const lastMsg = GLOBAL_CHATS.length > 0 ? GLOBAL_CHATS[GLOBAL_CHATS.length - 1] : null;
+        container.innerHTML = lastMsg ? `
             <div style="background:#f1f5f9; padding:15px; border-radius:8px;">
-                <strong>Latest Message (${lastMsg.sender}):</strong>
-                <p style="margin:5px 0;">"${lastMsg.text}"</p>
-                <div style="margin-top:10px;">
-                    <input type="text" id="admin-reply-input" placeholder="Type reply..." style="padding:8px; width:70%;">
-                    <button class="btn btn-sm btn-primary" onclick="adminApp.sendReply()">Reply</button>
-                </div>
-            </div>
-        `;
+                <strong>Latest:</strong> <p>"${lastMsg.text}"</p>
+                <input type="text" id="admin-reply-input" placeholder="Type reply..." style="padding:8px; width:70%; margin-top:10px;">
+                <button class="btn btn-sm btn-primary" onclick="adminApp.sendReply()">Reply</button>
+            </div>` : '<p>No messages.</p>';
     }
 
     async sendReply() {
         const input = document.getElementById('admin-reply-input');
         if(!input.value.trim()) return;
-        await API.post('/api/chat', { sender: 'admin', text: input.value });
-        showToast("Reply sent to guest.");
-        this.renderMessages();
+        
+        await apiCall('chat', 'POST', { sender: 'admin', text: input.value });
+        showToast("Reply sent.");
+        await this.fetchAdminMessages();
     }
 }
 
 function showToast(msg) {
     const t = document.getElementById('toast');
-    t.innerText = msg;
-    t.classList.add('show');
+    if(!t) return;
+    t.innerText = msg; t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// --- INITIALIZATION ---
 const app = new BookingApp();
 const adminApp = new AdminApp();
 viewController.init();
