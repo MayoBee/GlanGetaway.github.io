@@ -13,7 +13,6 @@
         <div class="container">
             <nav>
                 <div class="logo" onclick="viewController.showCustomer()">Glan<span>Getaway</span></div>
-                
                 <div class="nav-items">
                     <button class="btn-icon" title="Report Issue" onclick="document.getElementById('report-modal').classList.add('active')">🏳️</button>
                     <div id="nav-buttons"></div>
@@ -35,9 +34,9 @@
     </main>
 
     <main id="view-guest-auth" class="container hidden">
-        <div class="auth-wrapper">
-            <div class="card auth-card">
-                <h2 id="auth-title">Guest Login</h2>
+        <div style="display:flex; justify-content:center; align-items:center; min-height:60vh;">
+            <div class="card" style="width:100%; max-width:400px; padding:30px;">
+                <h2 style="text-align:center; margin-bottom:20px;" id="auth-title">Guest Login</h2>
                 <form id="guest-auth-form">
                     <div class="input-group">
                         <label>Username</label>
@@ -49,30 +48,30 @@
                     </div>
                     <button type="submit" class="btn btn-primary btn-block" id="auth-btn-submit">Login</button>
                 </form>
-                <p class="auth-switch">
+                <p style="text-align:center; margin-top:15px; font-size:0.9rem;">
                     <span id="auth-toggle-text">New here?</span> 
-                    <a href="#" onclick="guestAuth.toggleMode()">Click here</a>
+                    <a href="#" style="color:var(--primary); font-weight:bold;" onclick="guestAuth.toggleMode()">Click here</a>
                 </p>
-                <button class="btn btn-outline btn-block mt-20" onclick="viewController.showCustomer()">Cancel</button>
+                <button class="btn btn-outline btn-block" style="margin-top:20px;" onclick="viewController.showCustomer()">Cancel</button>
             </div>
         </div>
     </main>
 
-    <main id="view-guest-bookings" class="container hidden mt-40">
-        <h2>My Bookings</h2>
-        <div class="card table-responsive p-0">
+    <main id="view-guest-bookings" class="container hidden" style="padding-top:40px;">
+        <h2 style="margin-bottom:20px;">My Bookings</h2>
+        <div class="card table-responsive" style="padding:0;">
             <table id="guest-bookings-table">
-                <thead><tr><th>Type</th><th>Date</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+                <thead><tr><th>Type</th><th>Total</th><th>Method</th><th>Status</th><th>Action</th></tr></thead>
                 <tbody id="guest-bookings-body"></tbody>
             </table>
         </div>
-        <button class="btn btn-outline mt-20" onclick="viewController.showCustomer()">Back to Home</button>
+        <button class="btn btn-outline" style="margin-top:20px;" onclick="viewController.showCustomer()">Back to Home</button>
     </main>
 
     <main id="view-login" class="container hidden">
-        <div class="auth-wrapper">
-            <div class="card auth-card">
-                <h2>Admin Access</h2>
+        <div style="display:flex; justify-content:center; align-items:center; min-height:60vh;">
+            <div class="card" style="width:100%; max-width:400px; padding:30px;">
+                <h2 style="text-align:center; margin-bottom:20px;">Admin Access</h2>
                 <form id="admin-login-form">
                     <div class="input-group">
                         <label>Username</label>
@@ -83,14 +82,14 @@
                         <input type="password" id="admin-pass" required>
                     </div>
                     <button type="submit" class="btn btn-primary btn-block">Login</button>
-                    <button type="button" class="btn btn-outline btn-block mt-10" onclick="viewController.showCustomer()">Back</button>
+                    <button type="button" class="btn btn-outline btn-block" style="margin-top:10px;" onclick="viewController.showCustomer()">Back</button>
                 </form>
             </div>
         </div>
     </main>
 
-    <main id="view-admin" class="container hidden mt-40">
-        <div class="flex-between mb-20">
+    <main id="view-admin" class="container hidden" style="padding-top: 40px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h2>Admin Dashboard</h2>
             <span style="color:#666;">User: Adnan</span>
         </div>
@@ -102,7 +101,7 @@
         </div>
 
         <div id="tab-bookings">
-            <div class="card table-responsive p-0">
+            <div class="card table-responsive" style="padding:0;">
                 <table id="admin-bookings-table">
                     <thead><tr><th>Guest</th><th>Type</th><th>Amount</th><th>Method</th><th>Status</th><th>Action</th></tr></thead>
                     <tbody id="admin-bookings-body"></tbody>
@@ -111,14 +110,14 @@
         </div>
 
         <div id="tab-messages" class="hidden">
-            <div class="card p-20">
+            <div class="card" style="padding:20px;">
                 <h3>Guest Inquiries</h3>
                 <div id="admin-messages-list"></div>
             </div>
         </div>
 
         <div id="tab-reports" class="hidden">
-            <div class="card table-responsive p-0">
+            <div class="card table-responsive" style="padding:0;">
                 <table>
                     <thead><tr><th>Type</th><th>Description</th><th>Date</th></tr></thead>
                     <tbody id="admin-reports-body"></tbody>
@@ -127,37 +126,62 @@
         </div>
     </main>
 
-    <div class="modal-overlay" id="gallery-modal">
-        <div class="modal modal-lg">
-            <div class="flex-between mb-10">
-                <h3 style="color:var(--text-main);">Resort Gallery</h3> <button class="btn btn-sm btn-outline" onclick="app.closeGallery()">Close X</button>
+    <div class="modal-overlay" id="reviews-modal">
+        <div class="modal">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2>Reviews & Ratings</h2>
+                <button class="btn btn-sm btn-outline" onclick="app.closeReviews()">Close</button>
             </div>
             
+            <div style="background:#f8fafc; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <h4 style="margin-bottom:10px;">Write a Review</h4>
+                <div class="star-input-group" id="star-input-group">
+                    <span onclick="app.setRating(1)">★</span>
+                    <span onclick="app.setRating(2)">★</span>
+                    <span onclick="app.setRating(3)">★</span>
+                    <span onclick="app.setRating(4)">★</span>
+                    <span onclick="app.setRating(5)">★</span>
+                </div>
+                <div class="input-group">
+                    <textarea id="review-comment" rows="2" placeholder="Share your experience..." style="width:100%;"></textarea>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="app.submitReview()">Submit Review</button>
+            </div>
+
+            <div class="review-list" id="review-list-container"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="gallery-modal">
+        <div class="modal" style="max-width: 900px; width: 95%;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                <h3 style="color:white;">Resort Gallery</h3> <button class="btn btn-sm btn-outline" onclick="app.closeGallery()">Close X</button>
+            </div>
             <div class="gallery-wrapper">
                 <button class="gallery-btn prev-btn" onclick="app.changeGalleryImage(-1)">❮</button>
                 <img id="gallery-active-img" src="" alt="Gallery Image" class="gallery-img-view">
                 <button class="gallery-btn next-btn" onclick="app.changeGalleryImage(1)">❯</button>
             </div>
-            <p id="gallery-counter">1 / 3</p>
+            <p id="gallery-counter" style="text-align:center; margin-top:10px; font-weight:bold;">1 / 3</p>
         </div>
     </div>
 
     <div class="modal-overlay" id="map-modal">
         <div class="modal">
-            <div class="flex-between">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h2>Location Map</h2>
                 <button class="btn btn-sm btn-outline" onclick="app.closeMap()">Close</button>
             </div>
             <div id="map"></div>
-            <button class="btn btn-primary btn-block mt-15" onclick="app.getDirections()">
-                📍 Get Directions (Route Finder)
+            <button class="btn btn-primary btn-block" style="margin-top:15px;" onclick="app.getDirections()">
+                📍 Get Directions
             </button>
         </div>
     </div>
 
     <div class="modal-overlay" id="chat-modal">
         <div class="modal">
-            <div class="flex-between mb-10">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
                 <h2>Chat with Staff</h2>
                 <button class="btn btn-sm btn-outline" onclick="app.closeChat()">Close</button>
             </div>
@@ -171,13 +195,13 @@
 
     <div class="modal-overlay" id="booking-modal">
         <div class="modal modal-booking-xl">
-            <div class="flex-between">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h2>Book Your Stay</h2>
                 <button class="btn btn-sm btn-outline" onclick="app.closeModal()">Close</button>
             </div>
             
             <div class="booking-layout">
-                <form id="booking-form">
+                <form id="booking-form" style="display:flex; flex-direction:column;">
                     <div class="input-group">
                         <label>Full Name</label>
                         <input type="text" id="booking-guest-name" required placeholder="John Doe">
@@ -195,26 +219,23 @@
                         <div class="payment-card" onclick="app.selectPayment(this, 'Cash')">Cash on Arrival</div>
                     </div>
 
-                    <div id="payment-input-container" class="hidden">
-                        <div class="payment-note">
+                    <div id="payment-input-container" class="payment-details-container hidden">
+                        <div style="background: #ecfdf5; border: 1px solid #10b981; padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 0.9rem;">
                             <strong>Note:</strong> 50% reservation fee required.
                         </div>
                         <label id="payment-label">Account Info</label>
                         <input type="text" id="payment-field" required disabled>
                     </div>
 
-                    <div class="bill-summary">
-                        <div class="flex-between mb-5">
+                    <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; margin-top: auto; margin-bottom: 15px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
                             <span>Base Rate:</span> <span id="bill-base">₱0</span>
                         </div>
-                        <div class="flex-between mb-5">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
                             <span>Excess Pax:</span> <span id="bill-excess">₱0</span>
                         </div>
-                        <div class="flex-between mb-5">
-                            <span>Weekday Discount (15%):</span> <span id="bill-discount" style="color:red">-₱0</span>
-                        </div>
                         <hr style="margin:10px 0;">
-                        <div class="flex-between font-bold text-lg">
+                        <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.2rem;">
                             <span>Total Due:</span> <span id="bill-total" style="color: var(--primary);">₱0</span>
                         </div>
                     </div>
@@ -222,7 +243,7 @@
                     <button type="submit" class="btn btn-primary btn-block">Confirm Booking</button>
                 </form>
 
-                <div class="booking-options-wrapper">
+                <div style="background: #f8fafc; padding: 15px; border-radius: 8px;">
                     <h3 style="margin-bottom:10px;">Select Accommodation</h3>
                     <div class="booking-options-list" id="booking-options-container"></div>
                 </div>
@@ -231,15 +252,15 @@
     </div>
 
     <div class="modal-overlay" id="zoom-modal" onclick="document.getElementById('zoom-modal').classList.remove('active')">
-        <div class="zoom-container">
+        <div style="position:relative; max-width:90%; max-height:90%;">
             <img id="zoomed-image" src="" alt="Zoomed View">
-            <button class="btn btn-sm btn-primary zoom-close" onclick="document.getElementById('zoom-modal').classList.remove('active')">Close</button>
+            <button class="btn btn-sm btn-primary" style="position:absolute; top:10px; right:10px;" onclick="document.getElementById('zoom-modal').classList.remove('active')">Close</button>
         </div>
     </div>
 
     <div class="modal-overlay" id="report-modal">
         <div class="modal">
-            <h2 class="mb-20">Report an Issue</h2>
+            <h2 style="margin-bottom:20px;">Report an Issue</h2>
             <form id="report-form">
                 <div class="input-group">
                     <label>Issue Type</label>
@@ -254,15 +275,15 @@
                     <textarea id="report-desc" rows="3" required></textarea>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block">Submit Report</button>
-                <button type="button" class="btn btn-outline btn-block mt-10" onclick="document.getElementById('report-modal').classList.remove('active')">Cancel</button>
+                <button type="button" class="btn btn-outline btn-block" style="margin-top:10px;" onclick="document.getElementById('report-modal').classList.remove('active')">Cancel</button>
             </form>
         </div>
     </div>
 
     <div class="toast" id="toast">Action Successful!</div>
 
-    <footer>
-        <p>© 2026 GlanGetaway</p>
+    <footer style="margin-top:auto; padding:30px 0; text-align:center; color:var(--text-light); border-top:1px solid #ddd;">
+        <p>© 2026 GlanGetaway | MC Jorn Shoreline Beach Resort</p>
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
